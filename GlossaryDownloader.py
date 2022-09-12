@@ -5,23 +5,23 @@ import pathlib
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import load_workbook
 from os import walk
+from setPath import run as setPath
 
-# 구글 용어집 지정
-# 미니 용어집 지정
-# 구글 용어집 & 미니 용어집 비교
-# 한글이 있으면 해당 열 번역 넣기
+# 수정이 필요한 항목
+# 1. 최종 파일에서 2개 열이 삭제되어 노출됨
 
 def run() :
     # 세팅 불러오기
     setting = load_setting()
 
     # 미니 용어집 불러오기
-    path = input("미니 용어집을 드래그하거나 경로(.csv)를 입력해 주세요.\n")
-    path = path.replace('"', '')
+    path = setPath(input("미니 용어집을 드래그하거나 경로(.csv)를 입력해 주세요.\n"))
+    # path = 'c:\\Users\\Umoo\\Downloads\\[BG_Mir4] Mini Glossary - 0920 Update.csv'
     mGlossary = loadMGlossary(path, setting)
     mData = mGlossary[0]
     googleGlossaryPath = setting[4][0]
     gGlossary_col_info = setting[7]
+    eFile_col_info = setting[10]
     target = mData[1].upper().strip()
 
     # 구글시트와 비교
@@ -29,15 +29,18 @@ def run() :
     compared_data = gCompare(gData, mGlossary, gGlossary_col_info)
 
     # 엑셀과 비교
-    eData = loadEsheet()
-    compared_data = Ecompare(eData, mGlossary)
+    eData = loadEsheet(eFile_col_info)
+    compared_data = Ecompare(eData, compared_data)
+
+    # 엑셀에서 단어가 들어간 내용 찾기
+    compared_data = Efind(eData, compared_data)
     
     # 생성되는 파일 이름 관리
-    fileName = os.path.splitext(path.split('\\')[-1])[0]
-    changedPath = path.replace(fileName,fileName + f'_{target}')
+    fileName = path.split('/')[-1]
+    changedPath = fileName.replace('.csv', '').replace(f'{fileName}',f'{fileName}_{target}')
     uniq = 1
     while os.path.exists(changedPath):  # 동일한 파일명이 존재할 때
-        changedPath = path.replace(fileName,fileName + f'_{target}({uniq})')
+        changedPath = fileName.replace(f'{fileName}.csv', f'{fileName}_{target}({uniq})')
         uniq += 1
 
     writeFile(compared_data, changedPath)
@@ -56,24 +59,26 @@ def writeData(path, compared_data) :
             print(e)
 
 
-def loadEsheet() :
+def loadEsheet(eFile_col_info) :
     data = []
-    path = input("엑셀 파일 경로 또는 폴더의 경로를 입력해 주세요.\n")
+    path = setPath(input("엑셀 파일 경로 또는 폴더의 경로를 입력해 주세요.\n"))
     # path = '''D:\\!Project\\Umoo\\umoo\\Wemade\\1_Work\\0209_8테마선번역_Regular\\ㅗㅜㅑ'''
-    path = path.replace('"','').replace('& ','').replace("'",'')
+
     if '.xlsx' in os.path.splitext(path)[1].lower() :
         loadedFile = load_workbook(path, data_only=True)
         sheetNames = loadedFile.sheetnames
-        selected_row = selectRow()
+        source_col = eFile_col_info[0]
+        target_col = eFile_col_info[1]
         for sheetName in sheetNames:
             sheet = loadedFile[sheetName]
-            for row in sheet.iter_rows(min_row=1):
-                row_value = []
-                for i, cell in enumerate(row):
-                    if i == int(selected_row[0]) or i == int(selected_row[1]):
-                        if cell.value is None:
-                            cell.value = ''
-                        row_value.append(cell.value)
+
+            for row in sheet.iter_rows(min_row=2):
+                row_value = [row[int(source_col)].value, row[int(target_col)].value]
+                # for i, cell in enumerate(row):
+                #     if i == int(source_col) or i == int(target_col):
+                #         if cell.value is None:
+                #             cell.value = ''
+                #         row_value.append(cell.value)
                 data.append(row_value)
 
     else :
@@ -87,25 +92,21 @@ def loadEsheet() :
             sheetNames = loadedFile.sheetnames
             for sheetName in sheetNames:
                 sheet = loadedFile[sheetName]
-                for row in sheet.iter_rows(min_row=1):
-                    row_value = []
-                    for i, cell in enumerate(row):
-                        if i == int(selected_row[0]) or i == int(selected_row[1]) :
-                            if cell.value is None :
-                                cell.value = ''
-                            row_value.append(cell.value)
+                for row in sheet.iter_rows(min_row=2):
+                    row_value = [row[int(source_col)].value, row[int(target_col)].value]
                     data.append(row_value)
 
     return(data)
 
 def loadGsheet(target, googleGlossaryPath) :
-    doc = connectGsheet(googleGlossaryPath)
     print("구글 용어집 확인 중..")
+    doc = connectGsheet(googleGlossaryPath)
     worksheets = doc.worksheets()
     sheetname_list = [worksheet.title for worksheet in worksheets]
     if target in sheetname_list :
         worksheet_index = sheetname_list.index(target)
     else :
+        # map + lambda 보다 list comprehesion이 더 성능이 좋음
         sheetname_list = [sheetname.upper().replace('KO2','') for sheetname in sheetname_list]
         if target in sheetname_list :
             worksheet_index = sheetname_list.index(target)
@@ -114,53 +115,78 @@ def loadGsheet(target, googleGlossaryPath) :
     worksheet = doc.get_worksheet(worksheet_index)
     gdata = worksheet.get_all_values()
 
+    print("구글 용어집 확인 완료..")
     return gdata
 
 def gCompare(gGlossaryData, miniGlossaryData, gGlossary_col_info) :
+    print("텀베이스 용어집과 미니 용어집 비교 중...")
+    # 해당 언어 전체 구글 시트 내용
     gData = gGlossaryData
+    # 미니 용어집의 한글 + 해당 언어열
     mData = miniGlossaryData
     gSelected_source_col = int(gGlossary_col_info[0])
     gSelected_target_col = int(gGlossary_col_info[1])
-    data = []
+    data = [mData[0]]
 
-    for i, mRow in enumerate(mData[1:]) :
+    for mRow in mData[1:] :
         # 같은 한글이 있는지 확인
-        flag = True
         for gRow in gData[1:] :
+            row_data = [mRow[0]]
             if (mRow[0].replace(' ', '') == gRow[gSelected_source_col].replace(' ', '')) and gRow[gSelected_target_col] != '' :
-                if len(mRow) < 2 :
-                    mRow.append(gRow[gSelected_target_col])
-                elif len(mRow) == 2 and mRow[1] == '' :
-                    mRow[1] = gRow[gSelected_target_col]
-        data.append(mRow)
+                row_data.append(gRow[gSelected_target_col])
+                break
 
-    return mData
+        data.append(row_data)
+    print("비교 완료")
+    return data
 
 def Ecompare(eGlossaryData, miniGlossaryData) :
     eData = eGlossaryData
     mData = miniGlossaryData
+    data = []
 
-    for i, mRow in enumerate(mData[1:]) :
+    for mRow in mData[1:] :
         # 같은 한글이 있는지 확인
-        flag = True
-        for gRow in eData[1:] :
-            try :
-                if mRow[0].replace(' ', '') == gRow[0].replace(' ', '') and gRow[1] != '' :
-                    if len(mRow) < 2 :
-                        mData[i + 1].append(gRow[1])
-                    elif len(mRow) == 2 :
-                        mData[i+1][1] = gRow[1]
-            except Exception as e :
-                print(e)
+        row_data = [mRow[0]]
+        for eRow in eData :
+            if len(mRow) > 1 and mRow[-1] != '':
+                row_data.append(mRow[1])
+                break
 
-    return mData
+            elif mRow[0].replace(' ', '') == eRow[0].replace(' ', '') and eRow[1] != '' :
+                row_data.append(eRow[1])
+                break
+
+        data.append(row_data)
+
+    return data
+
+def Efind(eGlossaryData, miniGlossaryData) :
+    eData = eGlossaryData
+    mData = miniGlossaryData
+    data = []
+
+    for mRow in mData[1:] :
+        # 같은 한글이 있는지 확인
+        row_data = [mRow[0]]
+        for eRow in eData :
+            if len(mRow) > 1 and mRow[-1] != '':
+                row_data.append(mRow[1])
+                break
+
+            elif mRow[0].replace(' ', '') in eRow[0].replace(' ', '') and eRow[1] != '' :
+                row_data.append(eRow[1])
+                break
+
+        data.append(row_data)
+
+    return data
 
 def connectGsheet(googleGlossaryPath) :
     dirPath = str(pathlib.Path.cwd())
 
-    json_file_name = dirPath + '/majestic-layout-275109-d180b5dbabbe.json'
+    # json_file_name = dirPath + '/majestic-layout-275109-d180b5dbabbe.json'
     json_file_name = dirPath + '\\majestic-layout-275109-d180b5dbabbe.json'
-    # json_file_name = dirPath + '\\majestic-layout-275109-54bcf57ed64c.json'
     scope = [
         'https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive',
@@ -199,6 +225,7 @@ def loadMGlossary(path, setting) :
         for row in csvReader :
             data.append([row[int(selected_mrow[0])], row[int(selected_mrow[1])]])
 
+        print("미니 용어집 확인 완료")
         return data
 
 def load_setting() :
@@ -255,6 +282,12 @@ def setSetting() :
     # 텀베이스 용어집 열 정보 설정
     setting.append(['텀베이스 용어집 열 정보'])
     print('텀베이스 용어집 열 설정')
+    selcted_grow = selectRow()
+    setting.append(selcted_grow)
+
+    # 엑셀 파일 열 정보 설정
+    setting.append(['엑셀 파일 열 정보'])
+    print('엑셀 파일 열 설정')
     selcted_grow = selectRow()
     setting.append(selcted_grow)
 
