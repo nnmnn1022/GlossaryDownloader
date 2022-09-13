@@ -7,9 +7,6 @@ from openpyxl import load_workbook
 from os import walk
 from setPath import run as setPath
 
-# 수정이 필요한 항목
-# 1. 최종 파일에서 2개 열이 삭제되어 노출됨
-
 def run() :
     # 세팅 불러오기
     setting = load_setting()
@@ -37,13 +34,14 @@ def run() :
     
     # 생성되는 파일 이름 관리
     fileName = path.split('/')[-1]
-    changedPath = fileName.replace('.csv', '').replace(f'{fileName}',f'{fileName}_{target}')
+    dirName = path.replace(fileName, '')
+    changedName = fileName.replace('.csv', '') + '_' + target
     uniq = 1
-    while os.path.exists(changedPath):  # 동일한 파일명이 존재할 때
-        changedPath = fileName.replace(f'{fileName}.csv', f'{fileName}_{target}({uniq})')
+    while os.path.exists(dirName + '/' + changedName + '.csv'):  # 동일한 파일명이 존재할 때
+        changedName = changedName + f'({uniq})'
         uniq += 1
 
-    writeFile(compared_data, changedPath)
+    writeFile(compared_data, changedName, dirName)
 
     print("완료")
     os.system("pause")
@@ -65,10 +63,14 @@ def loadEsheet(eFile_col_info) :
     # path = '''D:\\!Project\\Umoo\\umoo\\Wemade\\1_Work\\0209_8테마선번역_Regular\\ㅗㅜㅑ'''
 
     if '.xlsx' in os.path.splitext(path)[1].lower() :
+        filename = path.split('/')[-1]
         loadedFile = load_workbook(path, data_only=True)
         sheetNames = loadedFile.sheetnames
         source_col = eFile_col_info[0]
+        if 'gender' in filename.lower() and len(eFile_col_info) > 2 : source_col = eFile_col_info[2]
         target_col = eFile_col_info[1]
+        if 'gender' in filename.lower() and len(eFile_col_info) > 3 : target_col = eFile_col_info[3]
+
         for sheetName in sheetNames:
             sheet = loadedFile[sheetName]
 
@@ -79,7 +81,7 @@ def loadEsheet(eFile_col_info) :
                 #         if cell.value is None:
                 #             cell.value = ''
                 #         row_value.append(cell.value)
-                data.append(row_value)
+                if None not in row_value : data.append(row_value)
 
     else :
         targetFilesAbsolutePaths = []
@@ -88,13 +90,18 @@ def loadEsheet(eFile_col_info) :
 
         for fileAbsolutePath in targetFilesAbsolutePaths:
             if os.path.splitext(fileAbsolutePath)[1].lower() != ".xlsx": continue
+            filename = fileAbsolutePath.split('/')[-1]
             loadedFile = load_workbook(fileAbsolutePath, data_only=True)
             sheetNames = loadedFile.sheetnames
+            source_col = eFile_col_info[0]
+            if 'gender' in filename.lower() and len(eFile_col_info) > 2 : source_col = eFile_col_info[2]
+            target_col = eFile_col_info[1]
+            if 'gender' in filename.lower() and len(eFile_col_info) > 3 : target_col = eFile_col_info[3]
             for sheetName in sheetNames:
                 sheet = loadedFile[sheetName]
                 for row in sheet.iter_rows(min_row=2):
                     row_value = [row[int(source_col)].value, row[int(target_col)].value]
-                    data.append(row_value)
+                    if None not in row_value : data.append(row_value)
 
     return(data)
 
@@ -132,8 +139,12 @@ def gCompare(gGlossaryData, miniGlossaryData, gGlossary_col_info) :
         # 같은 한글이 있는지 확인
         for gRow in gData[1:] :
             row_data = [mRow[0]]
-            if (mRow[0].replace(' ', '') == gRow[gSelected_source_col].replace(' ', '')) and gRow[gSelected_target_col] != '' :
-                row_data.append(gRow[gSelected_target_col])
+            if len(mRow) > 1 and mRow[-1] != '':
+                row_data.extend([mRow[1], '√'])
+                break
+
+            elif (mRow[0].replace(' ', '') == gRow[gSelected_source_col].replace(' ', '')) and gRow[gSelected_target_col] != '' :
+                row_data.extend([gRow[gSelected_target_col], '√'])
                 break
 
         data.append(row_data)
@@ -143,18 +154,18 @@ def gCompare(gGlossaryData, miniGlossaryData, gGlossary_col_info) :
 def Ecompare(eGlossaryData, miniGlossaryData) :
     eData = eGlossaryData
     mData = miniGlossaryData
-    data = []
+    data = [mData[0]]
 
     for mRow in mData[1:] :
         # 같은 한글이 있는지 확인
         row_data = [mRow[0]]
         for eRow in eData :
             if len(mRow) > 1 and mRow[-1] != '':
-                row_data.append(mRow[1])
+                row_data.extend([mRow[1], '√'])
                 break
 
             elif mRow[0].replace(' ', '') == eRow[0].replace(' ', '') and eRow[1] != '' :
-                row_data.append(eRow[1])
+                row_data.extend([eRow[1], '√'])
                 break
 
         data.append(row_data)
@@ -164,14 +175,14 @@ def Ecompare(eGlossaryData, miniGlossaryData) :
 def Efind(eGlossaryData, miniGlossaryData) :
     eData = eGlossaryData
     mData = miniGlossaryData
-    data = []
+    data = [mData[0]]
 
     for mRow in mData[1:] :
         # 같은 한글이 있는지 확인
         row_data = [mRow[0]]
         for eRow in eData :
             if len(mRow) > 1 and mRow[-1] != '':
-                row_data.append(mRow[1])
+                row_data.extend([mRow[1], '√'])
                 break
 
             elif mRow[0].replace(' ', '') in eRow[0].replace(' ', '') and eRow[1] != '' :
@@ -223,7 +234,7 @@ def loadMGlossary(path, setting) :
 
         # 한글, 타겟 언어만 가져오기
         for row in csvReader :
-            data.append([row[int(selected_mrow[0])], row[int(selected_mrow[1])]])
+            data.append([row[int(selected_mrow[0])].strip(), row[int(selected_mrow[1])]])
 
         print("미니 용어집 확인 완료")
         return data
@@ -296,6 +307,15 @@ def setSetting() :
 
 def writeFile(data, filename) :
     dirPath = str(pathlib.Path.cwd()) + f'/{filename}.csv'
+    with open(dirPath, 'w', encoding='utf-8-sig', newline='') as writeFile:
+        try:
+            csvWriter = csv.writer(writeFile)
+            csvWriter.writerows(data)
+        except Exception as e:
+            print(e)
+
+def writeFile(data, filename, dirpath) :
+    dirPath = str(dirpath) + f'/{filename}.csv'
     with open(dirPath, 'w', encoding='utf-8-sig', newline='') as writeFile:
         try:
             csvWriter = csv.writer(writeFile)
