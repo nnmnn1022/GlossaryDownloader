@@ -21,8 +21,8 @@ def run() :
     eFile_col_info = setting[10]
     target = mData[1].upper().strip()
 
-    # 구글시트와 비교
     # 22.10.21 요청으로 인한 수정 - 구글시트 링크가 없으면 생략하고 진행
+    # 구글시트와 비교
     if googleGlossaryPath:
         gData = loadGsheet(target, googleGlossaryPath)
         compared_data = gCompare(gData, mGlossary, gGlossary_col_info)
@@ -48,16 +48,6 @@ def run() :
     print("완료")
     os.system("pause")
 
-# 
-def writeData(path, compared_data) :
-    with open(path, 'w', encoding="utf-8-sig", newline='') as writeFile:
-        try:
-            csvWriter = csv.writer(writeFile)
-            csvWriter.writerows(compared_data)
-
-        except Exception as e:
-            print(e)
-
 
 def loadEsheet(eFile_col_info) :
     data = []
@@ -68,8 +58,10 @@ def loadEsheet(eFile_col_info) :
         filename = path.split('/')[-1]
         loadedFile = load_workbook(path, data_only=True)
         sheetNames = loadedFile.sheetnames
+        # 엑셀 파일 소스열 설정
         source_col = eFile_col_info[0]
         if 'gender' in filename.lower() and len(eFile_col_info) > 2 : source_col = eFile_col_info[2]
+        # 엑셀 파일 타겟열 설정
         target_col = eFile_col_info[1]
         if 'gender' in filename.lower() and len(eFile_col_info) > 3 : target_col = eFile_col_info[3]
 
