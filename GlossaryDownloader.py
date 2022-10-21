@@ -22,8 +22,9 @@ def run() :
     target = mData[1].upper().strip()
 
     # 구글시트와 비교
-    gData = loadGsheet(target, googleGlossaryPath)
-    compared_data = gCompare(gData, mGlossary, gGlossary_col_info)
+    if googleGlossaryPath:
+        gData = loadGsheet(target, googleGlossaryPath)
+        compared_data = gCompare(gData, mGlossary, gGlossary_col_info)
 
     # 엑셀과 비교
     eData = loadEsheet(eFile_col_info)
@@ -295,6 +296,7 @@ def setSetting() :
     print('텀베이스 용어집 열 설정')
     selcted_grow = selectRow()
     setting.append(selcted_grow)
+    setting.append('')
 
     # 엑셀 파일 열 정보 설정
     setting.append(['엑셀 파일 열 정보'])
@@ -304,18 +306,11 @@ def setSetting() :
 
     return setting
 
-
-def writeFile(data, filename) :
-    dirPath = str(pathlib.Path.cwd()) + f'/{filename}.csv'
-    with open(dirPath, 'w', encoding='utf-8-sig', newline='') as writeFile:
-        try:
-            csvWriter = csv.writer(writeFile)
-            csvWriter.writerows(data)
-        except Exception as e:
-            print(e)
-
-def writeFile(data, filename, dirpath) :
-    dirPath = str(dirpath) + f'/{filename}.csv'
+def writeFile(data, filename, dirpath = '') :
+    if dirpath == '':
+        dirPath = str(pathlib.Path.cwd()) + f'/{filename}.csv'
+    else:
+        dirPath = str(dirpath) + f'/{filename}.csv'
     with open(dirPath, 'w', encoding='utf-8-sig', newline='') as writeFile:
         try:
             csvWriter = csv.writer(writeFile)
