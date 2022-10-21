@@ -22,6 +22,7 @@ def run() :
     target = mData[1].upper().strip()
 
     # 구글시트와 비교
+    # 22.10.21 요청으로 인한 수정 - 구글시트 링크가 없으면 생략하고 진행
     if googleGlossaryPath:
         gData = loadGsheet(target, googleGlossaryPath)
         compared_data = gCompare(gData, mGlossary, gGlossary_col_info)
@@ -39,7 +40,7 @@ def run() :
     changedName = fileName.replace('.csv', '') + '_' + target
     uniq = 1
     while os.path.exists(dirName + '/' + changedName + '.csv'):  # 동일한 파일명이 존재할 때
-        changedName = changedName + f'({uniq})'
+        changedName = changedName + f'({uniq})' # 뒤에 숫자 추가
         uniq += 1
 
     writeFile(compared_data, changedName, dirName)
@@ -77,12 +78,8 @@ def loadEsheet(eFile_col_info) :
 
             for row in sheet.iter_rows(min_row=2):
                 row_value = [row[int(source_col)].value, row[int(target_col)].value]
-                # for i, cell in enumerate(row):
-                #     if i == int(source_col) or i == int(target_col):
-                #         if cell.value is None:
-                #             cell.value = ''
-                #         row_value.append(cell.value)
-                if None not in row_value : data.append(row_value)
+                if None not in row_value :
+                    data.append(row_value)
 
     else :
         targetFilesAbsolutePaths = []
@@ -100,9 +97,14 @@ def loadEsheet(eFile_col_info) :
             if 'gender' in filename.lower() and len(eFile_col_info) > 3 : target_col = eFile_col_info[3]
             for sheetName in sheetNames:
                 sheet = loadedFile[sheetName]
-                for row in sheet.iter_rows(min_row=2):
-                    row_value = [row[int(source_col)].value, row[int(target_col)].value]
-                    if None not in row_value : data.append(row_value)
+                try:
+                    for row in sheet.iter_rows(min_row=2):
+                        row_value = [row[int(source_col)].value, row[int(target_col)].value]
+                        if None not in row_value : data.append(row_value)
+                except IndexError as e:
+                    print('한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
+                    os.system("pause")
+                    exit()
 
     return(data)
 
@@ -224,9 +226,6 @@ def loadMGlossary(path, setting) :
     else :
         path = path.replace('"','').replace('& ','').replace("'",'')
         
-        with open(path, 'r', encoding='utf-8-sig') as csvFile:
-            csvReader = list(csv.reader(csvFile))
-
         print("미니 용어집 확인 중..")
         data = []
         if os.path.exists(path):
@@ -234,8 +233,14 @@ def loadMGlossary(path, setting) :
                 csvReader = list(csv.reader(csvFile))
 
         # 한글, 타겟 언어만 가져오기
-        for row in csvReader :
-            data.append([row[int(selected_mrow[0])].strip(), row[int(selected_mrow[1])]])
+        # 22.10.21 index 오류로 인한 수정 - 예외처리
+        try:
+            for row in csvReader :
+                data.append([row[int(selected_mrow[0])], row[int(selected_mrow[1])]])
+        except IndexError as e:
+            print('한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
+            os.system("pause")
+            exit()
 
         print("미니 용어집 확인 완료")
         return data
@@ -268,10 +273,10 @@ def load_setting() :
 
 def selectRow() :
     source_row = input('소스 열 (a~z) : ')
-    source_row = ord(source_row.upper().replace(' ','')) - 65
+    source_row = ord(source_row.upper().strip()) - 65
 
     taget_row = input('타겟 열 (a~z) : ')
-    taget_row = ord(taget_row.upper().replace(' ', '')) - 65
+    taget_row = ord(taget_row.upper().strip()) - 65
 
     return [source_row, taget_row]
 
