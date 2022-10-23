@@ -105,6 +105,7 @@ def loadEsheet(eFile_col_info) :
 
     return(data)
 
+
 def loadGsheet(target, googleGlossaryPath) :
     print("구글 용어집 확인 중..")
     doc = connectGsheet(googleGlossaryPath)
@@ -124,6 +125,7 @@ def loadGsheet(target, googleGlossaryPath) :
 
     print("구글 용어집 확인 완료..")
     return gdata
+
 
 def gCompare(gGlossaryData, miniGlossaryData, gGlossary_col_info) :
     print("텀베이스 용어집과 미니 용어집 비교 중...")
@@ -151,6 +153,7 @@ def gCompare(gGlossaryData, miniGlossaryData, gGlossary_col_info) :
     print("비교 완료")
     return data
 
+
 def Ecompare(eGlossaryData, miniGlossaryData) :
     eData = eGlossaryData
     mData = miniGlossaryData
@@ -171,6 +174,7 @@ def Ecompare(eGlossaryData, miniGlossaryData) :
         data.append(row_data)
 
     return data
+
 
 def Efind(eGlossaryData, miniGlossaryData) :
     eData = eGlossaryData
@@ -193,6 +197,7 @@ def Efind(eGlossaryData, miniGlossaryData) :
 
     return data
 
+
 def connectGsheet(googleGlossaryPath) :
     dirPath = str(pathlib.Path.cwd())
 
@@ -212,6 +217,7 @@ def connectGsheet(googleGlossaryPath) :
         os.system("pause")
 
     return doc
+
 
 def loadMGlossary(path, setting) :
     data = []
@@ -239,6 +245,7 @@ def loadMGlossary(path, setting) :
         print("미니 용어집 확인 완료")
         return data
 
+
 def load_setting() :
     dirPath = str(pathlib.Path.cwd())
     setting = []
@@ -264,6 +271,7 @@ def load_setting() :
         writeFile(setting, 'glosarry_downloader_settings')
 
     return setting
+
 
 def selectRow() :
     source_row = input('소스 열 (a~z) : ')
@@ -305,8 +313,11 @@ def setSetting() :
     return setting
 
 
-def writeFile(data, filename) :
-    dirPath = str(pathlib.Path.cwd()) + f'/{filename}.csv'
+def writeFile(data, filename, dirpath = '') :
+    if dirpath == '':
+        dirPath = str(pathlib.Path.cwd()) + f'/{filename}.csv'
+    else:
+        dirPath = str(dirpath) + f'/{filename}.csv'
     with open(dirPath, 'w', encoding='utf-8-sig', newline='') as writeFile:
         try:
             csvWriter = csv.writer(writeFile)
@@ -314,14 +325,6 @@ def writeFile(data, filename) :
         except Exception as e:
             print(e)
 
-def writeFile(data, filename, dirpath) :
-    dirPath = str(dirpath) + f'/{filename}.csv'
-    with open(dirPath, 'w', encoding='utf-8-sig', newline='') as writeFile:
-        try:
-            csvWriter = csv.writer(writeFile)
-            csvWriter.writerows(data)
-        except Exception as e:
-            print(e)
 
 if __name__ == '__main__' :
     run()
