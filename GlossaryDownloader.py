@@ -8,24 +8,29 @@ from os import walk
 from setPath import run as setPath
 
 def run() :
+    print("===================== [START] 시작 =====================")
     # 세팅 불러오기
     setting = load_setting()
 
     # 미니 용어집 불러오기
-    path = setPath(input("미니 용어집을 드래그하거나 경로(.csv)를 입력해 주세요.\n"))
+    path = setPath(input("***** [Notice] 미니 용어집을 드래그하거나 경로(.csv)를 입력해 주세요.*****\n>"))
     # path = 'c:\\Users\\Umoo\\Downloads\\[BG_Mir4] Mini Glossary - 0920 Update.csv'
     mGlossary = loadMGlossary(path, setting)
     mData = mGlossary[0]
-    googleGlossaryPath = setting[4][0]
+    # 22.10.27 요청으로 인한 수정 - 구글시트 링크가 없으면 생략하고 진행
+    if setting[4]:
+        googleGlossaryPath = setting[4][0]
     gGlossary_col_info = setting[7]
     eFile_col_info = setting[10]
     target = mData[1].upper().strip()
 
-    # 구글시트와 비교
-    # 22.10.21 요청으로 인한 수정 - 구글시트 링크가 없으면 생략하고 진행
-    if googleGlossaryPath:
+    # 구글시트와 비교 / 구글시트 링크가 없으면 생략하고 진행
+    if setting[4]:
         gData = loadGsheet(target, googleGlossaryPath)
         compared_data = gCompare(gData, mGlossary, gGlossary_col_info)
+    else :
+        print("구글 용어집 링크가 존재하지 않습니다.")
+        compared_data = mGlossary
 
     # 엑셀과 비교
     eData = loadEsheet(eFile_col_info)
@@ -45,23 +50,13 @@ def run() :
 
     writeFile(compared_data, changedName, dirName)
 
-    print("완료")
+    print("===================== [END] 완료 =====================")
     os.system("pause")
-
-# 
-def writeData(path, compared_data) :
-    with open(path, 'w', encoding="utf-8-sig", newline='') as writeFile:
-        try:
-            csvWriter = csv.writer(writeFile)
-            csvWriter.writerows(compared_data)
-
-        except Exception as e:
-            print(e)
 
 
 def loadEsheet(eFile_col_info) :
     data = []
-    path = setPath(input("엑셀 파일 경로 또는 폴더의 경로를 입력해 주세요.\n"))
+    path = setPath(input("***** [Notice] 엑셀 파일 경로 또는 폴더의 경로를 입력해 주세요.*****\n>"))
     # path = '''D:\\!Project\\Umoo\\umoo\\Wemade\\1_Work\\0209_8테마선번역_Regular\\ㅗㅜㅑ'''
 
     if '.xlsx' in os.path.splitext(path)[1].lower() :
@@ -101,8 +96,8 @@ def loadEsheet(eFile_col_info) :
                     for row in sheet.iter_rows(min_row=2):
                         row_value = [row[int(source_col)].value, row[int(target_col)].value]
                         if None not in row_value : data.append(row_value)
-                except IndexError as e:
-                    print('한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
+                except IndexError:
+                    print('[Error] 한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
                     os.system("pause")
                     exit()
 
@@ -121,7 +116,7 @@ def loadGsheet(target, googleGlossaryPath) :
         sheetname_list = [sheetname.upper().replace('KO2','') for sheetname in sheetname_list]
         if target in sheetname_list :
             worksheet_index = sheetname_list.index(target)
-        else : print('Target 언어 용어집을 찾을 수 없습니다.')
+        else : print('[Error]Target 언어 용어집을 찾을 수 없습니다.')
     
     worksheet = doc.get_worksheet(worksheet_index)
     gdata = worksheet.get_all_values()
@@ -216,7 +211,7 @@ def connectGsheet(googleGlossaryPath) :
         doc = gc.open_by_url(googleGlossaryPath)
     except Exception as e :
         print(e)
-        print("권한이 없습니다.")
+        print("[Error] 권한이 없습니다.")
         os.system("pause")
 
     return doc
@@ -227,7 +222,7 @@ def loadMGlossary(path, setting) :
     # 미니 용어집 열 정보 받아오기
     selected_mrow = setting[1]
     if '.csv' not in path :
-        print('잘못된 파일입니다.')
+        print('[Error] 잘못된 파일입니다.')
         path = ''
     else :
         path = path.replace('"','').replace('& ','').replace("'",'')
@@ -244,7 +239,7 @@ def loadMGlossary(path, setting) :
             for row in csvReader :
                 data.append([row[int(selected_mrow[0])], row[int(selected_mrow[1])]])
         except IndexError as e:
-            print('한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
+            print('[Error] 한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
             os.system("pause")
             exit()
 
@@ -264,15 +259,24 @@ def load_setting() :
                 [bool('미니 용어집 열 정보' in csvReader[0]),
                 bool('텀베이스 용어집 주소' in csvReader[3]),
                 bool('텀베이스 용어집 열 정보' in csvReader[6]),
+                bool('엑셀 파일 열 정보' in csvReader[9]),
                 bool(len(csvReader[1]) == 2),
-                bool(len(csvReader[4]) == 1),
-                bool(len(csvReader[7]) == 2)]) :
+                bool((len(csvReader[4]) == 1 and len(csvReader[7]) == 2) or 
+                    (len(csvReader[4]) == 0 and len(csvReader[7]) == 2) or 
+                    (len(csvReader[4]) == 0 and len(csvReader[7]) == 0)
+                    ),
+                bool(len(csvReader[10]) == 2 or len(csvReader[10]) == 4),]
+                ) :
                 print("setting 파일을 확인했습니다.")
                 for row in csvReader :
                     setting.append(row)
-
+            else :
+                print("***** [Notice] 잘못된 데이터 구성입니다.\n설정을 진행합니다..")
+                setting = setSetting()
+                writeFile(setting, 'glosarry_downloader_settings')
+                return setting
     else :
-        print("올바르지 않은 파일 형식입니다.\n설정을 진행합니다..")
+        print("***** [Notice] 설정 파일이 없습니다.\n설정을 진행합니다..")
         setting = setSetting()
         writeFile(setting, 'glosarry_downloader_settings')
 
@@ -301,7 +305,7 @@ def setSetting() :
 
     # 텀베이스 용어집 주소 설정
     setting.append(['텀베이스 용어집 주소'])
-    setting.append([input('텀베이스 용어집 주소 입력\n')])
+    setting.append([input('텀베이스 용어집 주소 입력\n>')])
     setting.append('')
 
     # 텀베이스 용어집 열 정보 설정
