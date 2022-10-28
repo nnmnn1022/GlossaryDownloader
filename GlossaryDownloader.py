@@ -99,7 +99,7 @@ def loadEsheet(eFile_col_info) :
                         row_value = [row[int(source_col)].value, row[int(target_col)].value]
                         if None not in row_value : data.append(row_value)
                 except IndexError:
-                    print('[Error] 한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
+                    print('[Error] 엑셀 파일의 한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
                     os.system("pause")
                     exit()
 
@@ -241,7 +241,7 @@ def loadMGlossary(path, setting) :
             for row in csvReader :
                 data.append([row[int(selected_mrow[0])], row[int(selected_mrow[1])]])
         except IndexError as e:
-            print('[Error] 한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
+            print('[Error] 미니용어집의 한글, 타겟열 설정이 잘못되었습니다.\n프로그램을 종료합니다.')
             os.system("pause")
             exit()
 
