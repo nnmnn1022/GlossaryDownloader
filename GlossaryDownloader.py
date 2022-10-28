@@ -64,7 +64,7 @@ def loadEsheet(eFile_col_info, extra_eFile_col_info) :
         target_col = eFile_col_info[1]
 
         # 현재 엑셀 파일이름 안에 예외 파일들의 이름이 포함되어 있으면 소스/ 타겟열을 그에 맞게 바꿔주기
-        if extra_eFile_col_info and extra_eFile_col_info != '':
+        if extra_eFile_col_info and extra_eFile_col_info != [[]]:
             for extra_info in extra_eFile_col_info:
                 if extra_info[0] in filename:
                     source_col = extra_info[1]
