@@ -276,18 +276,14 @@ def load_setting() :
         with open(f'{dirPath}/glosarry_downloader_settings.csv', 'r', encoding='utf-8-sig') as csvFile:
             csvReader = list(csv.reader(csvFile))
             # 제대로 된 파일이면 setting 데이터를 반환
+            # csv에 열이 하나 더 생기는 경우 변경 후 저장하면
+            # exe 파일에서는 모든 행(list)에 공백 값이 추가되는 현상 있음.
             if all(
                 [bool('미니 용어집 열 정보' in csvReader[0]),
                 bool('텀베이스 용어집 주소' in csvReader[3]),
                 bool('텀베이스 용어집 열 정보' in csvReader[6]),
                 bool('엑셀 파일 열 정보' in csvReader[9]),
-                bool('예외 엑셀 파일 열 정보' in csvReader[12]),
-                bool(len(csvReader[1]) == 2),
-                bool((len(csvReader[4]) == 1 and len(csvReader[7]) == 2) or 
-                    (len(csvReader[4]) == 0 and len(csvReader[7]) == 2) or 
-                    (len(csvReader[4]) == 0 and len(csvReader[7]) == 0)
-                    ),
-                bool(len(csvReader[10]) == 2 or len(csvReader[10]) == 4)]
+                bool('예외 엑셀 파일 열 정보' in csvReader[12])]
                 ) :
                 print("setting 파일을 확인했습니다.")
                 for row in csvReader :
