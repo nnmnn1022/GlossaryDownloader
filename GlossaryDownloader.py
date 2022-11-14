@@ -66,6 +66,7 @@ def loadEsheet(eFile_col_info, extra_eFile_col_info) :
         # 현재 엑셀 파일이름 안에 예외 파일들의 이름이 포함되어 있으면 소스/ 타겟열을 그에 맞게 바꿔주기
         if extra_eFile_col_info and extra_eFile_col_info != [[]]:
             for extra_info in extra_eFile_col_info:
+                if not extra_info: continue
                 if extra_info[0] in filename:
                     source_col = extra_info[1]
                     target_col = extra_info[2]
@@ -292,12 +293,12 @@ def load_setting() :
                 for row in csvReader :
                     setting.append(row)
             else :
-                print("\n***** [Notice] 잘못된 데이터 구성입니다.\n설정을 진행합니다.")
+                print("\n***** [Notice] 잘못된 데이터 구성입니다. 설정을 진행합니다. *****")
                 setting = setSetting()
                 writeFile(setting, 'glosarry_downloader_settings')
                 return setting
     else :
-        print("\n***** [Notice] 설정 파일이 없습니다. *****\n설정을 진행합니다.")
+        print("\n***** [Notice] 설정 파일이 없습니다. 설정을 진행합니다. *****")
         setting = setSetting()
         writeFile(setting, 'glosarry_downloader_settings')
 
@@ -311,13 +312,14 @@ def selectRow() :
 
     taget_row = input('타겟 열 (a~z) : ')
     taget_row = ord(taget_row.upper().strip()) - 65
+
     print('')
     return [source_row, taget_row]
 
 
 def setSetting() :
     setting = []
-    print("안내에 따라 정보를 입력하세요.")
+    print("***** [Notice] 안내에 따라 정보를 입력하세요. *****")
 
     # 미니 용어집 열 정보 설정
     setting.append(['미니 용어집 열 정보'])
@@ -342,7 +344,7 @@ def setSetting() :
         selcted_grow = selectRow()
         setting.append(selcted_grow)
     else:
-        print('텀베이스 용어집 주소가 없어 열 설정을 생략합니다.')
+        print('***** [Notice] 텀베이스 용어집 주소가 없어 열 설정을 생략합니다. *****\n')
         setting.append('')
     setting.append('')
 
@@ -356,12 +358,12 @@ def setSetting() :
     # 추가적인 엑셀 파일 열 정보 설정
     setting.append(['예외 엑셀 파일 열 정보'])
     while True:
-        answer = input('예외 엑셀 파일에 대한 열 설정을 추가로 진행 하시겠습니까?\ny 또는 n을 입력하세요.\n')
+        answer = input('***** [Notice] 예외 엑셀 파일에 대한 열 설정을 추가로 진행 하시겠습니까? *****\n***** [Notice] y 또는 n을 입력하세요. *****\n')
         if answer == 'n':
-            setting.append('')
+            # setting.append('')
             break
         else:
-            tmp = [input('예외 엑셀 파일에 *공통적으로 포함되는 파일명* 입력\n')]
+            tmp = [input('***** [Notice] 예외 엑셀 파일에 *공통적으로 포함되는 파일명* 입력 *****\n')]
             selcted_grow = selectRow()
             tmp.extend(selcted_grow)
             setting.append(tmp)
