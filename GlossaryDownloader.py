@@ -362,7 +362,7 @@ def setSetting() :
         if answer == 'n':
             # setting.append('')
             break
-        else:
+        elif answer == 'y':
             tmp = [input('***** [Notice] 예외 엑셀 파일에 *공통적으로 포함되는 파일명* 입력 *****\n')]
             selcted_grow = selectRow()
             tmp.extend(selcted_grow)
